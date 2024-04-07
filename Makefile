@@ -17,7 +17,7 @@ LINKER=linker.ld
 
 all: $(NAME)
 
-$(NAME): $(KERNEL_OBJ) $(KERNEL_PACKAGE_OBJ) $(BOOT_OBJ)
+$(NAME): $(BOOT_OBJ) $(KERNEL_PACKAGE_OBJ) $(KERNEL_OBJ)
 	PATH=$(HOME_PREFIX)/bin $(TARGET)-ld -T $(LINKER) $(LINKER_FLAGS) -o $@ $(OBJ)
 
 $(KERNEL_OBJ): $(KERNEL_SRC)
@@ -44,23 +44,29 @@ clone_gcc:
 	fi
 
 install_binutils:
-	mkdir -p $(HOME)/src/build-binutils;
-	$(HOME)/src/binutils-gdb/configure --target=$(TARGET) --prefix="$(PREFIX)" --with-sysroot --disable-nls --disable-werror
-	# --disable-nls: Reduces dependencies and compile time. Set tools language to english
-	make -C $(HOME)/src/build-binutils
-	make -C $(HOME)/src/build-binutils install
+	if which -- $(TARGET)-$(CC) >/dev/null 2>&1; then \
+		echo "$(TARGET)-$(CC) already exist"; \
+		exit 0; \
+	fi
+	mkdir -p $(HOME)/src/build-binutils-$(TARGET);
+	cd $(HOME)/src/build-binutils-$(TARGET) && \
+		../binutils-gdb/configure --target=$(TARGET) --prefix="$(PREFIX)" --with-sysroot --disable-nls --disable-werror && \
+		make && \
+		make install
 
 
 install_gcc:
-	which -- $(TARGET)-as || echo $(TARGET)-as is not in the PATH
-	
-	mkdir -p $(HOME)/src/build-gcc
-	$(HOME)/src/gcc-11/configure --target=$(TARGET) --prefix="$(PREFIX)" --disable-nls --enable-languages=c,c++,go --without-headers
-
-	make -C $(HOME)/src/build-gcc all-gcc
-	make -C $(HOME)/src/build-gcc all-target-libgcc
-	make -C $(HOME)/src/build-gcc install-gcc
-	make -C $(HOME)/src/build-gcc install-target-libgcc
+	if which -- $(TARGET)-as >/dev/null 2>&1; then \
+		echo "$(TARGET)-as already exist"; \
+		exit 0; \
+	fi
+	mkdir -p $(HOME)/src/build-gcc-$(TARGET)
+	cd $(HOME)/src/build-gcc-$(TARGET) && \
+		../gcc-11/configure --target=$(TARGET) --prefix="$(PREFIX)" --disable-nls --enable-languages=c,c++,go --without-headers && \
+		make all-gcc && \
+		make all-target-libgcc && \
+		make install-gcc && \
+		make install-target-libgcc
 
 install: clone_binutils clone_gcc install_binutils install_gcc
 

@@ -1,3 +1,6 @@
-.o
-.gox
-.bin
+*.o
+*.gox
+*.bin
+*.log
+*.status
+*.tmp
