@@ -4,7 +4,7 @@ CC=gccgo
 TARGET=i686-elf
 HOME_PREFIX="$(HOME)/opt/cross"
 GO_FLAGS=-static -Werror -nostdlib -nostartfiles -nodefaultlibs
-LINKER_FLAGS=-ffreestanding -O2 -nostdlib -shared 
+LINKER_FLAGS=-ffreestanding -O2 -nostdlib -lgcc
 
 KERNEL_SRC=kernel.go
 KERNEL_PACKAGE_SRC=terminal.go
@@ -12,20 +12,19 @@ BOOT_SRC=boot.s
 KERNEL_OBJ=$(KERNEL_SRC:.go=.go.o)
 KERNEL_PACKAGE_OBJ=$(KERNEL_PACKAGE_SRC:.go=.go.o)
 BOOT_OBJ=$(BOOT_SRC:.s=.o)
-OBJ=$(KERNEL_OBJ) $(KERNEL_PACKAGE_OBJ) $(BOOT_OBJ)
+OBJ=$(BOOT_OBJ) $(KERNEL_PACKAGE_OBJ) $(KERNEL_OBJ)
 LINKER=linker.ld
 
 all: $(NAME)
 
 $(NAME): $(BOOT_OBJ) $(KERNEL_PACKAGE_OBJ) $(KERNEL_OBJ)
-	PATH=$(HOME_PREFIX)/bin $(TARGET)-ld -T $(LINKER) $(LINKER_FLAGS) -o $@ $(OBJ)
+	PATH=$(HOME_PREFIX)/bin $(TARGET)-gcc -T $(LINKER) $(LINKER_FLAGS) -o $@ $(OBJ)
 
 $(KERNEL_OBJ): $(KERNEL_SRC)
 	PATH=$(HOME_PREFIX)/bin $(TARGET)-$(CC) $(GO_FLAGS) -c $< -o $@
 
 $(KERNEL_PACKAGE_OBJ): $(KERNEL_PACKAGE_SRC)
 	PATH=$(HOME_PREFIX)/bin $(TARGET)-$(CC) $(GO_FLAGS) -c $< -o $@
-	PATH=$(HOME_PREFIX)/bin $(TARGET)-objcopy -j .go_export terminal.go.o terminal.gox
 
 $(BOOT_OBJ): $(BOOT_SRC)
 	PATH=$(HOME_PREFIX)/bin $(TARGET)-as $< -o $@
